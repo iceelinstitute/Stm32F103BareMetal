@@ -31,7 +31,7 @@ Ledon directory contains one C file along with its Makefile and linker script. l
 
 This directory contains four programs for blinking LED. Programs use different ways to blink LED
 
-1. ledblink_bssr.c    :	uses BSSR/BSR for blinking
+1. ledblink_bssr.c    :	uses BSSR/BSR 
 2. ledblink_odr.c     :	uses ODR 
 3. ledblink_odr_xor.c : uses ODR with XOR functionality
 
