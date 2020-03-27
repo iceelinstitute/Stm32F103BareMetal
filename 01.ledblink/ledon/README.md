@@ -20,19 +20,21 @@ Output Precompiled File :
   2)  ledon.hex
   
 Steps for creating LEDON.BIN File
-# make o
-# make elf
-# make hex
-# make bin
 
-Above steps can be executed on command line also
-
+Command Line :
  * Compile          : arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -O0 -Wall -c ledon.c
  * Link and Locate  : arm-none-eabi-gcc  -march=armv7-m -nostartfiles --specs=nosys.specs -T stm32f103.ld ledon.o -o ledon.elf 
  * ELF to Hex       : arm-none-eabi-objcopy -O ihex ledon.elf 
  * ELF to Bin       : arm-none-eabi-objcopy -O binary ledon.elf
  * Clean            : rm ledon.elf ledon.hex ledon.bin
-
+ * Writing to Flash : st-flash write ledon.bin 0x8000000
+ 
+ Using Makefile :
+Creating Bin File
+# make o
+# make elf
+# make hex
+# make bin
 
 For writing into flash
 # make flash
