@@ -154,11 +154,12 @@ void ledblink_odr_xor()
 
 int main(void)
 {
-	// Enabling Clock
-	RCC->APB2ENR |= (1 << 4); // Enable GPIOC
+	// Enabling Clock for GPIOC
+	RCC->APB2ENR |= (1 << 4);
 	
-	// Make GPIOD Pin1 output
+	// Make GPIOC Pin13 output (PC13)
 	GPIOC->CRH |= 0x00200000;
+
 
 	//GPIOC->BRR = (1 << 13); // LED ON
 	while(1) {
