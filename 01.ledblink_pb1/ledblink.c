@@ -1,27 +1,25 @@
 /*
  * File Name  : ledblink.c Ver 1.0
  *
- *
  * Description:
- *              LED Blink Program with software delay using NOP                
+ *              LED ON Program 
  *
-  * Author: 
+ * Author: 
  *              ICEEL.NET (iceelinstitute@gmail.com)
  * 
  * Date  : 27 March 2020
  * 
  * License : GNU General Public License v3.0
  *
-* 
  * Hardware : 
  *      STM32F103C8T6 Blue Pill Board 
- 
+ *
  *      Processor Detail    :
  *          Chip                :   STM32F103C8T6    
  *          Processor Type      :   ARM ® 32-bit Cortex ® -M3 CPU Core 
  *          Device Type         :   F1 Medium-density device
  *          Floating Point Unit :   Not Present
-  *          Flash memory       :   64K Bytes (65536 Bytes)
+ *          Flash memory       :   64K Bytes (65536 Bytes)
  *                                  (st-info --flash : 0x10000) (pagesize: 1024)
  *                                  Location  :: 0x800 0000
  *          SRAM                :   20 Kbytes (65536 Bytes)
@@ -31,12 +29,14 @@
  *
  *      Ext. Clock Freq     :   8 MHz   
  *
- * Led Connection Details : PC13
+ * Led Connection Details : PB1 [ Connect External LED - 3.3V (positive) and PB1 (negative) ]
  *
- * Compile          :
- * Link and Locate  :         
- * Flash Command    :
- *              
+ * Compile          : arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -O0 -Wall -c ledblink.c
+ * Link and Locate  : arm-none-eabi-gcc  -march=armv7-m -nostartfiles --specs=nosys.specs -T stm32f103.ld ledblink.o -o ledblink.elf 
+ * ELF to Hex       : arm-none-eabi-objcopy -O ihex ledblink.elf 
+ * ELF to Bin       : arm-none-eabi-objcopy -O binary ledblink.elf
+ * Clean            : rm ledblink.elf ledblink.hex ledblink.bin
+ * Flash Command    : st-flash write ledblink.bin
  */
 
 /*********************************************************
@@ -49,7 +49,7 @@
 ********************************/
 
 #define PERIPH_BASE     ((uint32_t) 0x40000000)
-#define GPIOC_BASE      (PERIPH_BASE + 0x11000) // GPIOC base address is 0x40011000
+#define GPIOB_BASE      (PERIPH_BASE + 0x10C00) // GPIOB 
 #define RCC_BASE        (PERIPH_BASE + 0x21000) // RCC base address is 0x40021000
 
 /**************************
@@ -95,8 +95,10 @@ typedef struct
 /****************************************
 * Peripheral Structure Definatio
 *****************************************/
-#define GPIOC   ((GPIO_type *)  GPIOC_BASE)
+#define GPIOB   ((GPIO_type *)  GPIOB_BASE)
 #define RCC     ((RCC_type *)     RCC_BASE)
+
+#define GPIO_PIN   (1)   //PB1
 
 int main(void);
 
@@ -112,77 +114,79 @@ __attribute__ ((section(".isr_vectors"))) = {
 
 /************************************************************
  *  Function Description : ledblink_bsrr
- *      Set/Resets GPIO (PC13) on/off using BSRR/BRR (bit 13)
+ *      Set/Resets GPIO  on/off using BSRR/BRR 
  ************************************************************/
 void ledblink_bsrr()
 {
     int i;
-    GPIOC->BSRR = (1 << 13); // LED OFF (3.3V will switch OFF LED)
+    GPIOB->BSRR = (1 << GPIO_PIN); // LED OFF (3.3V will switch OFF LED)
 	for (i = 0; i < 800000; ++i) __asm__("nop");
 
-    GPIOC->BRR = (1 << 13); // LED ON (OV will switch on LED)
+    GPIOB->BRR = (1 << GPIO_PIN); // LED ON (OV will switch on LED)
     for (i = 0; i < 200000; ++i) __asm__("nop");
 }
 
 
 /***************************************************************
  *  Function Description : ledblink_odr
- *      Set/Resets GPIO (PC13) on/off using AND/OR of bit 13
+ *      Set/Resets GPIO on/off using AND/OR 
  **************************************************************/
 
 void ledblink_odr()
 {
     int i;
     
-    GPIOC->ODR |= (1 << 13);
+    GPIOB->ODR |= (1 << GPIO_PIN);
 	for (i = 0; i < 100000; ++i) __asm__("nop");
 		
-    GPIOC->ODR &= (0 << 13);
+    GPIOB->ODR &= (0 << GPIO_PIN);
 	for (i = 0; i < 500000; ++i) __asm__("nop");
 }
 
 /****************************************************************
  *  Function Description : 
- *      Set/Resets GPIO (PC13) on/off using exclution OR of bit 13
+ *      Set/Resets GPIO on/off using exclution OR 
  *****************************************************************/
 void ledblink_odr_xor()
 {
     int i;
-    GPIOC->ODR ^= (1 << 13);
+    GPIOB->ODR ^= (1 << GPIO_PIN);
 	for (i = 0; i < 100000; ++i) __asm__("nop");
 }
 
 int main(void)
 {
     //  Register RCC->APB2ENR
+	// Enabling Clock for GPIOB RCC Register
     //  15     14     13   12   11    10    09    08   07   06    05    04    03   02    01   00
     //  Res    USERT  Res  SP1  TIM1  ADC2  ADC1  Res  Res  IOPE  IOPD  IOPC IOPB  IOPA  Res  AFIO
     //         1EN    -    EN   EN    EN    EN              EN    EN    EN   EN    EN         EN
 
-	// Enabling Clock for GPIOC
-	RCC->APB2ENR |= (1 << 4);
-	
-    // Make GPIOB Pin5 output (PB1)  General Purpose Push Pull Output 2 Mhz
+	RCC->APB2ENR |= (1 << 3); // Enabling Clock for GPIOB RCC Register
+    	
+	// Make GPIOB Pin5 output (PB1)  General Purpose Push Pull Output 2 Mhz
     // Conf : 0x0 Mode : 0x2 ------> 4 Bit 0x2 General Purpose Push Pull Output 2 Mhz
-    // GPIOC->CRL |= 0x00000002; PIN_0          GPIOC->CRL |= 0x00000020; PIN_1
-    // GPIOC->CRL |= 0x00000200; PIN_2          GPIOC->CRL |= 0x00002000; PIN_3
-    // GPIOC->CRL |= 0x00020000; PIN_4          GPIOC->CRL |= 0x00200000; PIN_5
-    // GPIOC->CRL |= 0x02000000; PIN_6          GPIOC->CRL |= 0x20000000; PIN_7
+    
+    // GPIOB->CRL |= 0x00000002; PIN_0          GPIOB->CRL |= 0x00000020; PIN_1
+    // GPIOB->CRL |= 0x00000200; PIN_2          GPIOB->CRL |= 0x00002000; PIN_3
+    // GPIOB->CRL |= 0x00020000; PIN_4          GPIOB->CRL |= 0x00200000; PIN_5
+    // GPIOB->CRL |= 0x02000000; PIN_6          GPIOB->CRL |= 0x20000000; PIN_7
 
-    // GPIOC->CRH |= 0x00000002; PIN_8          GPIOC->CRH |= 0x00000020; PIN_9
-    // GPIOC->CRH |= 0x00000200; PIN_10         GPIOC->CRH |= 0x00002000; PIN_11
-    // GPIOC->CRH |= 0x00020000; PIN_12         GPIOC->CRH |= 0x00200000; PIN_13
-    // GPIOC->CRH |= 0x02000000; PIN_14         GPIOC->CRH |= 0x20000000; PIN_15
-
-	// Make GPIOC Pin13 output (PC13)
-	GPIOC->CRH |= 0x00200000;
+    // GPIOB->CRH |= 0x00000002; PIN_8          GPIOB->CRH |= 0x00000020; PIN_9
+    // GPIOB->CRH |= 0x00000200; PIN_10         GPIOB->CRH |= 0x00002000; PIN_11
+    // GPIOB->CRH |= 0x00020000; PIN_12         GPIOB->CRH |= 0x00200000; PIN_13
+    // GPIOB->CRH |= 0x02000000; PIN_14         GPIOB->CRH |= 0x20000000; PIN_15
 
 
-	//GPIOC->BRR = (1 << 13); // LED ON
+       GPIOB->CRL |= 0x00000020; // PB1
+//     OR
+//     GPIOB->CRL |= (0x2 << (4*(GPIO_PIN))) ; // 
+
+	//GPIOB->BRR = (1 << 13); // LED ON
 	while(1) {
+            ledblink_bsrr();
     //    ledblink_odr_xor();
-    //    ledblink_bsrr();
-          ledblink_odr_xor();
+    //    ledblink_odr_xor();
 	}
 
 	return 0;
